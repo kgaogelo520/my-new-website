@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Birthday Cake</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #111;
+            font-family: 'Arial', sans-serif;
+            color: white;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .cake-container {
+            position: relative;
+            margin-bottom: 50px;
+        }
+        
+        .cake {
+            width: 250px;
+            height: 120px;
+            background: linear-gradient(to bottom, #f9c5d1, #f2789f);
+            border-radius: 10px 10px 0 0;
+            position: relative;
+        }
+        
+        .cake-top {
+            width: 270px;
+            height: 30px;
+            background: linear-gradient(to bottom, #f2789f, #f999b7);
+            border-radius: 50%;
+            position: absolute;
+            top: -15px;
+            left: -10px;
+        }
+        
+        .candle {
+            position: absolute;
+            width: 20px;
+            height: 80px;
+            background: linear-gradient(to right, #e0a040, #f0c060, #e0a040);
+            border-radius: 5px;
+            top: -90px;
+        }
+        
+        .candle:nth-child(1) {
+            left: 80px;
+        }
+        
+        .candle:nth-child(2) {
+            left: 150px;
+        }
+        
+        .flame {
+            position: absolute;
+            width: 12px;
+            height: 25px;
+            background: linear-gradient(to top, #ff6600, #ffcc00);
+            border-radius: 50% 50% 20% 20%;
+            box-shadow: 0 0 15px #ff8800, 0 0 30px #ff5500;
+            animation: flicker 0.5s infinite alternate;
+            top: -25px;
+            left: 4px;
+        }
+        
+        .message {
+            margin-top: 50px;
+            max-width: 400px;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 2s ease-out;
+            line-height: 1.6;
+            padding: 0 20px;
+        }
+        
+        @keyframes flicker {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.1) translateY(-5px); }
+        }
+        
+        .instructions {
+            margin-top: 30px;
+            color: #ff8800;
+            font-size: 18px;
+        }
+        
+        .smoke {
+            position: absolute;
+            background-color: rgba(255,255,255,0.8);
+            border-radius: 50%;
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .permission-btn {
+            margin-top: 20px;
+            padding: 12px 25px;
+            background-color: #ff5500;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="cake-container">
+        <div class="cake">
+            <div class="cake-top"></div>
+            <div class="candle">
+                <div class="flame" id="flame1"></div>
+            </div>
+            <div class="candle">
+                <div class="flame" id="flame2"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="instructions" id="instructions">Allow microphone access, then blow on your screen</div>
+    <button class="permission-btn" id="permissionBtn">Enable Microphone</button>
+    
+    <div class="message" id="message">
+        <h2 style="color: #ff8800; margin-bottom: 20px;">Happy Birthday, my everything ❤</h2>
+        <p style="font-size: 18px;">We live in a world where some things can't be said out loud, 
+        but in my heart, your name is written everywhere.</p>
+        <p style="font-style: italic; margin-top: 15px;">You are my secret, my comfort, my thrill, and my forever.</p>
+        <p style="margin-top: 30px; font-size: 20px; color: #ff8800;">Love Kgaugelo</p>
+    </div>
+
+    <script>
+        const flame1 = document.getElementById('flame1');
+        const flame2 = document.getElementById('flame2');
+        const message = document.getElementById('message');
+        const instructions = document.getElementById('instructions');
+        const permissionBtn = document.getElementById('permissionBtn');
+        
+        let audioContext;
+        let microphone;
+        let analyser;
+        let isBlowing = false;
+        let candlesBlown = 0;
+        
+        permissionBtn.addEventListener('click', initMicrophone);
+        
+        function initMicrophone() {
+            instructions.textContent = "Listening... blow on your microphone now";
+            permissionBtn.style.display = "none";
+            
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 256;
+            
+            navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+                .then(function(stream) {
+                    microphone = audioContext.createMediaStreamSource(stream);
+                    microphone.connect(analyser);
+                    
+                    detectBlowing();
+                })
+                .catch(function(err) {
+                    instructions.textContent = "Microphone access denied. Please refresh and try again.";
+                    console.error(err);
+                });
+        }
+        
+        function detectBlowing() {
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            
+            function checkBlow() {
+                analyser.getByteFrequencyData(dataArray);
+                
+                let sum = 0;
+                for (let i = 0; i < bufferLength; i++) {
+                    sum += dataArray[i];
+                }
+                let average = sum / bufferLength;
+                
+                if (average > 60 && !isBlowing) {
+                    isBlowing = true;
+                    blowOutCandle();
+                    setTimeout(() => { isBlowing = false; }, 1000);
+                }
+                
+                if (candlesBlown < 2) {
+                    requestAnimationFrame(checkBlow);
+                }
+            }
+            
+            checkBlow();
+        }
+        
+        function blowOutCandle() {
+            candlesBlown++;
+            
+            const flame = candlesBlown === 1 ? flame1 : flame2;
+            
+            // Remove flicker and start blow out animation
+            flame.style.animation = 'none';
+            flame.style.transition = 'all 0.5s ease-out';
+            
+            // Create smoke effect
+            for (let i = 0; i < 5; i++) {
+                setTimeout(function() {
+                    const candleContainer = flame.parentElement;
+                    const smoke = document.createElement('div');
+                    smoke.className = 'smoke';
+                    
+                    // Initial smoke position
+                    const leftPos = candleContainer.offsetLeft + 10;
+                    smoke.style.left = leftPos + 'px';
+                    smoke.style.top = (candleContainer.offsetTop - 20) + 'px';
+                    smoke.style.width = '5px';
+                    smoke.style.height = '5px';
+                    
+                    document.querySelector('.cake-container').appendChild(smoke);
+                    
+                    // Animate smoke
+                    setTimeout(function() {
+                        smoke.style.transition = 'all 2s ease-out';
+                        smoke.style.opacity = '0.6';
+                        smoke.style.transform = 'translateY(-' + (50 + i*10) + 'px) translateX(' + (Math.random() * 20 - 10) + 'px)';
+                        smoke.style.width = (10 + i*5) + 'px';
+                        smoke.style.height = (10 + i*5) + 'px';
+                        
+                        // Remove smoke after animation
+                        setTimeout(function() {
+                            smoke.remove();
+                        }, 2000);
+                    }, 10);
+                }, i * 200);
+            }
+            
+            // Blow out animation
+            flame.style.transform = 'scale(0.5)';
+            flame.style.opacity = '0';
+            
+            setTimeout(function() {
+                flame.style.display = 'none';
+                
+                if (candlesBlown === 2) {
+                    // Show message when both candles are blown
+                    instructions.textContent = "You did it! ❤";
+                    message.style.opacity = '1';
+                    message.style.transform = 'translateY(0)';
+                }
+            }, 800);
+        }
+    </script>
+</body>
+</html>
