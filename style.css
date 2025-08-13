@@ -1,0 +1,16 @@
+body {
+  margin: 0;
+  overflow: hidden;
+  background: black;
+  color: white;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.message {
+  position: absolute;
+  bottom: 30px;
+  width: 100%;
+  text-align: center;
+  font-size: 1.2rem;
+  color: #ffb6c1;
+}

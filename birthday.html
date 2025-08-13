@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Blow Out the Candles</title>
+<style>
+  body {
+    background: linear-gradient(135deg, #f06, #f79);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #fff;
+    text-align: center;
+    padding: 3rem 2rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    height: 100vh;
+  }
+  #cake-container {
+    font-size: 6rem;
+    margin-bottom: 2rem;
+  }
+  .flame {
+    display: inline-block;
+    animation: flicker 1s infinite alternate;
+    user-select: none;
+  }
+  @keyframes flicker {
+    0% { opacity: 1; transform: translateY(0) scaleY(1); }
+    50% { opacity: 0.8; transform: translateY(-2px) scaleY(1.1); }
+    100% { opacity: 1; transform: translateY(0) scaleY(1); }
+  }
+  #message {
+    font-size: 1.8rem;
+    margin-top: 1rem;
+    display: none;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.5;
+    text-shadow: 0 0 8px #ffea00;
+  }
+  #instructions {
+    margin-bottom: 1rem;
+    font-size: 1.2rem;
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+    background: rgba(255 255 255 / 0.2);
+    padding: 10px;
+    border-radius: 8px;
+    user-select: none;
+  }
+</style>
+</head>
+<body>
+
+  <div id="cake-container">
+    🎂
+    <span class="flame" id="flame1">🕯</span>
+    <span class="flame" id="flame2">🕯</span>
+    <span class="flame" id="flame3">🕯</span>
+    🎂
+  </div>
+  <div id="instructions">
+    Please blow gently into your microphone to blow out the candles!
+  </div>
+  <div id="message">
+    <strong>Happy Birthday!</strong> 🎉<br><br>
+    Wishing you a day filled with love, laughter, and unforgettable moments.<br>
+    May all your dreams come true and your heart be forever joyful.<br><br>
+    Here's to you — have the most amazing birthday ever! ❤✨
+  </div>
+
+<script>
+  const flames = [
+    document.getElementById('flame1'),
+    document.getElementById('flame2'),
+    document.getElementById('flame3')
+  ];
+  const message = document.getElementById('message');
+  const instructions = document.getElementById('instructions');
+
+  let audioContext;
+  let analyser;
+  let microphone;
+  let dataArray;
+  let candleOut = false;
+
+  async function setupMic() {
+    try {
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      microphone = audioContext.createMediaStreamSource(stream);
+      analyser = audioContext.createAnalyser();
+      analyser.fftSize = 512;
+      microphone.connect(analyser);
+      dataArray = new Uint8Array(analyser.frequencyBinCount);
+      detectBlow();
+    } catch (err) {
+      instructions.textContent = 'Microphone access denied or not available.';
+      console.error(err);
+    }
+  }
+
+  function detectBlow() {
+    analyser.getByteFrequencyData(dataArray);
+    let sum = 0;
+    for(let i = 0; i < dataArray.length; i++) {
+      sum += dataArray[i];
+    }
+    const average = sum / dataArray.length;
+
+    if (!candleOut && average > 40) {  // sensitivity threshold
+      blowOutCandles();
+      candleOut = true;
+    }
+    requestAnimationFrame(detectBlow);
+  }
+
+  function blowOutCandles() {
+    flames.forEach(flame => {
+      flame.style.animation = 'none';
+      flame.style.opacity = '0';
+    });
+    instructions.style.display = 'none';
+    message.style.display = 'block';
+  }
+
+  setupMic();
+</script>
+</body>
+</html>
